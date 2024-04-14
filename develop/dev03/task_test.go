@@ -5,31 +5,35 @@ import (
 	"testing"
 )
 
-func TestSortWithColumn(t *testing.T) {
-	config := Config{Column: "2"}
+func TestSort(t *testing.T) {
+	input := []string{"d a", "c b", "b c", "a d"}
+	config := Config{
+		Key:             "1",
+		SortByNumerical: false,
+		ReverseSort:     true,
+		UniqueValues:    false,
+	}
 
 	expected := []string{"d a", "c b", "b c", "a d"}
+	result, _ := Sort(input, config)
 
-	output, err := Sort("test1.txt", config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if !reflect.DeepEqual(output, expected) {
-		t.Errorf("Expected: %v, got: %v", expected, output)
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Sort function did not sort as expected. Expected: %v, Got: %v", expected, result)
 	}
 }
 
-// func TestSortNumerical(t *testing.T) {
-// 	input := []string{"3", "1", "10", "2"}
-// 	config := Config{SortNumerical: true}
-// 	expected := "1n2n3n10n"
-// 	result, err := Sort(input, config)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+func TestGetCompareFunc(t *testing.T) {
+	config1 := Config{SortByNumerical: true, ReverseSort: true}
+	compareFunc1 := getCompareFunc(config1)
 
-// 	if result != expected {
-// 		t.Errorf("Sort didn't produce the expected result. Got: %s, Expected: %s", result, expected)
-// 	}
-// }
+	if !compareFunc1("10", "5") {
+		t.Errorf("Numerical reverse sort failed")
+	}
+
+	config2 := Config{SortByNumerical: false, ReverseSort: false}
+	compareFunc2 := getCompareFunc(config2)
+
+	if !compareFunc2("apple", "banana") {
+		t.Errorf("String sort failed")
+	}
+}

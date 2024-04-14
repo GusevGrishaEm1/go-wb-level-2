@@ -4,7 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -35,7 +36,8 @@ import (
 
 func main() {
 	config := ParseFlags()
-	result, err := Sort("test1.txt", config)
+	input := []string{"d a", "c b", "b c", "a d"}
+	result, err := Sort(input, config)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		return
@@ -44,8 +46,8 @@ func main() {
 }
 
 type Config struct {
-	Column           string
-	SortNumerical    bool
+	Key              string
+	SortByNumerical  bool
 	ReverseSort      bool
 	UniqueValues     bool
 	SortByMonth      bool
@@ -57,8 +59,8 @@ type Config struct {
 func ParseFlags() Config {
 	config := Config{}
 
-	flag.StringVar(&config.Column, "k", "", "Specify the column to sort by")
-	flag.BoolVar(&config.SortNumerical, "n", false, "Sort by numerical value")
+	flag.StringVar(&config.Key, "k", "", "Specify the column to sort by")
+	flag.BoolVar(&config.SortByNumerical, "n", false, "Sort by numerical value")
 	flag.BoolVar(&config.ReverseSort, "r", false, "Sort in reverse order")
 	flag.BoolVar(&config.UniqueValues, "u", false, "Do not display duplicate lines")
 	flag.BoolVar(&config.SortByMonth, "M", false, "Sort by month name")
@@ -71,47 +73,78 @@ func ParseFlags() Config {
 	return config
 }
 
-func Sort(input string, c Config) ([]string, error) {
-	cmd := exec.Command("sort")
+type element struct {
+	str string
+	key string
+}
 
-	if c.Column != "" {
-		cmd.Args = append(cmd.Args, "-k"+c.Column)
+func Sort(input []string, c Config) ([]string, error) {
+	elementsToSort := make([]element, 0, len(input))
+
+	// Определяем элементы и их ключи для сортировки
+	for _, v := range input {
+		if c.Key != "" {
+			arrKeys := strings.Split(v, " ")
+			numKey, err := strconv.Atoi(c.Key)
+			if err != nil {
+				return nil, err
+			}
+			elementsToSort = append(elementsToSort, element{v, arrKeys[numKey-1]})
+		} else {
+			elementsToSort = append(elementsToSort, element{v, v})
+		}
 	}
 
-	if c.SortNumerical {
-		cmd.Args = append(cmd.Args, "-n")
-	}
+	// Определяем функцию для сортировки
+	compare := getCompareFunc(c)
 
-	if c.ReverseSort {
-		cmd.Args = append(cmd.Args, "-r")
-	}
+	// Сортируем
+	sort.Slice(elementsToSort, func(i, j int) bool {
+		return compare(elementsToSort[i].key, elementsToSort[j].key)
+	})
 
+	// Убираем уникальные элементы
 	if c.UniqueValues {
-		cmd.Args = append(cmd.Args, "-u")
+		mp := make(map[string]struct{}, len(elementsToSort))
+		output := make([]string, 0, len(elementsToSort))
+		for _, vl := range elementsToSort {
+			_, ok := mp[vl.str]
+			if ok {
+				continue
+			}
+			mp[vl.str] = struct{}{}
+			output = append(output, vl.str)
+		}
+		return output, nil
 	}
 
-	if c.SortByMonth {
-		cmd.Args = append(cmd.Args, "-M")
+	output := make([]string, 0, len(elementsToSort))
+	for _, vl := range elementsToSort {
+		output = append(output, vl.str)
 	}
+	return output, nil
+}
 
-	if c.IgnoreTrailing {
-		cmd.Args = append(cmd.Args, "-b")
+// получаем функцию для сравнения элементов
+func getCompareFunc(config Config) func(v1 string, v2 string) bool {
+	if config.SortByNumerical {
+		return func(v1 string, v2 string) bool {
+			num1, err1 := strconv.Atoi(v1)
+			num2, err2 := strconv.Atoi(v2)
+			if err1 == nil && err2 == nil {
+				if config.ReverseSort {
+					return num1 > num2
+				}
+				return num1 < num2
+			} else {
+				return false
+			}
+		}
 	}
-
-	if c.CheckSorted {
-		cmd.Args = append(cmd.Args, "-c")
+	return func(v1 string, v2 string) bool {
+		if config.ReverseSort {
+			return v1 > v2
+		}
+		return v1 < v2
 	}
-
-	if c.SortSuffixValues {
-		cmd.Args = append(cmd.Args, "-h")
-	}
-
-	cmd.Args = append(cmd.Args, input)
-
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	return strings.Split(string(out), "\r\n"), nil
 }
