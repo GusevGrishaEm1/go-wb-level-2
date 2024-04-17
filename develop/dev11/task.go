@@ -1,5 +1,11 @@
 package main
 
+import (
+	"dev11/handlers"
+	"dev11/usecase"
+	"flag"
+)
+
 /*
 === HTTP server ===
 
@@ -23,5 +29,15 @@ package main
 */
 
 func main() {
+	config := parseFlags()
+	calendar := usecase.New()
+	handlers.StartServer(calendar, config)
+}
 
+func parseFlags() handlers.ConfigServer {
+	var addr string
+	flag.StringVar(&addr, "addr", "", "Address of the config server")
+	flag.Parse()
+
+	return handlers.ConfigServer{Addr: addr}
 }

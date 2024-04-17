@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
 /*
 === Or channel ===
 
@@ -34,5 +40,45 @@ fmt.Printf(“fone after %v”, time.Since(start))
 */
 
 func main() {
+	var or func(channels ...<-chan interface{}) <-chan interface{} = func(channels ...<-chan interface{}) <-chan interface{} {
+		mainChannel := make(chan interface{}, len(channels))
+		go func() {
+			defer close(mainChannel)
+			wg := sync.WaitGroup{}
+			for _, ch := range channels {
+				wg.Add(1)
+				go func(ch <-chan interface{}) {
+					defer wg.Done()
+					for v := range ch {
+						fmt.Print("Received: ", v)
+						mainChannel <- v
+					}
+				}(ch)
+			}
+			wg.Wait()
+		}()
+		return mainChannel
+	}
 
+	sig := func(after time.Duration) <-chan interface{} {
+		c := make(chan interface{})
+		go func() {
+			defer close(c)
+			time.Sleep(after)
+			c <- struct{}{}
+		}()
+		return c
+	}
+
+	start := time.Now()
+	for range or(
+		sig(2*time.Minute),
+		sig(5*time.Minute),
+		sig(1*time.Second),
+		sig(30*time.Second),
+		sig(1*time.Minute),
+	) {
+	}
+
+	fmt.Printf("fone after %v", time.Since(start))
 }

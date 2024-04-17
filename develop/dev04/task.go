@@ -35,9 +35,10 @@ func findAnagrams(words []string) map[string][]string {
 		sortedWord := string(runes)
 
 		if _, ok := anagramMap[sortedWord]; !ok {
-			anagramMap[sortedWord] = []string{}
+			anagramMap[sortedWord] = []string{w}
+		} else {
+			anagramMap[sortedWord] = append(anagramMap[sortedWord], w)
 		}
-		anagramMap[sortedWord] = append(anagramMap[sortedWord], w)
 	}
 
 	for key, value := range anagramMap {

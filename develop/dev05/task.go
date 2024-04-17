@@ -19,107 +19,175 @@ package main
 */
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"regexp"
 	"strings"
 )
 
-func grep(data []byte, pattern string, flags map[string]bool) []string {
-	lines := strings.Split(string(data), "n")
-	matchedLines := make([]string, 0)
+func main() {
+	config := parseFlags()
 
-	regExp := regexp.MustCompile(pattern)
+	if config.FilePath != "" {
+		file, err := os.Open(config.FilePath)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		io.Copy(os.Stdout, file)
+	}
+
+	filter := func(line string) bool {
+		if config.IgnoreCase {
+			line = strings.ToLower(line)
+		}
+
+		pattern := os.Args[len(os.Args)-1]
+
+		if config.Fixed {
+			return line == pattern
+		} else {
+			return strings.Contains(line, pattern)
+		}
+	}
+
+	pattern := flag.Arg(0)
+	if pattern == "" {
+		fmt.Fprintln(os.Stderr, "Error: No pattern provided")
+		os.Exit(1)
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	lines := make([]string, 0)
+	ha
+	for scanner.Scan() {
+		line := scanner.Text()
+		if filter(line) {
+
+		}
+		lines = append(lines, line)
+	}
 
 	for i, line := range lines {
-		matched := regExp.MatchString(line)
-
-		if flags["v"] {
-			matched = !matched
-		}
-
-		if matched {
-			matchedLines = append(matchedLines, line)
+		if filter(line) {
+			if config.Invert {
+				continue
+			}
+			if config.Count {
+				count++
+				continue
+			}
+			if config.LineNumber {
+				fmt.Print(i + 1, ":")
+			}
+			fmt.Println(line)
 		} else {
-			context := flags["A"] + flags["B"]
-			if context > 0 && len(matchedLines) > 0 {
-				if flags["A"] > 0 {
-					for j := 1; j <= flags["A"]; j++ {
-						if i+j < len(lines) {
-							matchedLines = append(matchedLines, lines[i+j])
-						}
-					}
+			if config.Invert {
+				if config.Count {
+					count++
+					continue
 				}
-				matchedLines = append(matchedLines, line)
-				if flags["B"] > 0 {
-					for j := 1; j <= flags["B"]; j++ {
-						if i+j < len(lines) {
-							matchedLines = append(matchedLines, lines[i+j])
-						}
-					}
+				if config.LineNumber {
+					fmt.Print(i + 1, ":")
 				}
+				fmt.Println(line)
 			}
 		}
+
 	}
+		line := scanner.Text()
 
-	return matchedLines
-}
 
-func main() {
-	after := flag.Int("A", 0, "Print N lines after match")
-	before := flag.Int("B", 0, "Print N lines before match")
-	context := flag.Bool("C", false, "Print N lines around match")
-	count := flag.Bool("c", false, "Print count of matching lines")
-	ignoreCase := flag.Bool("i", false, "Ignore case")
-	invert := flag.Bool("v", false, "Invert match")
-	fixed := flag.Bool("F", false, "Exact string match")
-	lineNum := flag.Bool("n", false, "Print line number")
+		if filter(line) {
 
-	flag.Parse()
+			if config.Invert {
+				continue
+			}
 
-	args := flag.Args()
-	if len(args) < 2 {
-		fmt.Println("Usage: grep [flags] pattern file")
-		os.Exit(1)
-	}
+			if config.Count {
+				count++
+				continue
+			}
 
-	data, err := os.ReadFile(args[1])
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		os.Exit(1)
-	}
+			if config.Context != 0 || config.After != 0 || config.Before != 0 {
+				if lastMatchLine == 0 {
+					lastMatchLine = count
+				}
 
-	pattern := args[0]
-	if *ignoreCase {
-		pattern = "(?i)" + pattern
-	}
-	if *fixed {
-		pattern = regexp.QuoteMeta(pattern)
-	}
-
-	flags := map[string]bool{
-		"A": *after,
-		"B": *before,
-		"C": *context,
-		"c": *count,
-		"i": *ignoreCase,
-		"v": *invert,
-		"F": *fixed,
-		"n": *lineNum,
-	}
-
-	matchedLines := grep(data, pattern, flags)
-
-	if *count {
-		fmt.Println("Number of matching lines:", len(matchedLines))
-	} else {
-		for i, line := range matchedLines {
-			if *lineNum {
-				fmt.Printf("%d: %sn", i+1, line)
+				if config.Before != 0 && count-lastMatchLine <= config.Before {
+					if config.LineNumber {
+						fmt.Print(count, ":")
+					}
+					fmt.Println(line)
+				} else if config.Context != 0 && count-lastMatchLine <= config.Context {
+					if config.LineNumber {
+						fmt.Print(count, ":")
+					}
+					fmt.Println(line)
+				} else if config.After != 0 && count-lastMatchLine > config.After {
+					if config.LineNumber {
+						fmt.Print(count, ":")
+					}
+					fmt.Println(line)
+				}
 			} else {
+				if config.LineNumber {
+					fmt.Print(count, ":")
+				}
+				fmt.Println(line)
+			}
+		} else {
+			if config.Invert {
+				if config.Count {
+					count++
+				}
+				if config.LineNumber {
+					fmt.Print(count, ":")
+				}
 				fmt.Println(line)
 			}
 		}
 	}
+
+	if config.Count {
+		fmt.Print(count)
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading input:", err)
+		os.Exit(1)
+	}
+}
+
+type Config struct {
+	After      int
+	Before     int
+	Context    int
+	Count      bool
+	IgnoreCase bool
+	Invert     bool
+	Fixed      bool
+	LineNumber bool
+	FilePath   string
+}
+
+func parseFlags() Config {
+	config := Config{}
+
+	flag.IntVar(&config.After, "A", 0, "print +N lines after a match")
+	flag.IntVar(&config.Before, "B", 0, "print +N lines before a match")
+	flag.IntVar(&config.Context, "C", 0, "print +N lines around a match")
+	flag.BoolVar(&config.Count, "c", false, "count the number of lines")
+	flag.BoolVar(&config.IgnoreCase, "i", false, "ignore case distinctions")
+	flag.BoolVar(&config.Invert, "v", false, "select non-matching lines")
+	flag.BoolVar(&config.Fixed, "F", false, "match exact string, not regex")
+	flag.BoolVar(&config.LineNumber, "n", false, "print line number with output lines")
+	flag.StringVar(&config.FilePath, "file", "", "path to the file to filter")
+
+	flag.Parse()
+
+	return config
 }
