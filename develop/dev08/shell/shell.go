@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -92,12 +91,7 @@ func executeCommand(command, output string) (string, error) {
 			return "", fmt.Errorf("Usage: kill <pid>")
 		}
 	case "ps":
-		var cmd *exec.Cmd
-		if runtime.GOOS == "windows" {
-			cmd = exec.Command("tasklist")
-		} else {
-			cmd = exec.Command("ps", "aux")
-		}
+		cmd := exec.Command("ps", "aux")
 		outputBytes, err := cmd.Output()
 		if err != nil {
 			return "", fmt.Errorf("error: %w", err)
