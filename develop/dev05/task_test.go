@@ -50,18 +50,18 @@ func TestGrep(t *testing.T) {
 			args:        []string{"-A", "2", "3"},
 			expectedOut: "3\n4\n5",
 		},
-		// {
-		// 	name:        "Before",
-		// 	input:       "1\n2\n3\n4\n5",
-		// 	args:        []string{"-B", "2", "3"},
-		// 	expectedOut: "1\n2\n3",
-		// },
-		// {
-		// 	name:        "Context",
-		// 	input:       "1\n2\n3\n4\n5",
-		// 	args:        []string{"-C", "2", "3"},
-		// 	expectedOut: "1\n2\n3\n4\n5",
-		// },
+		{
+			name:        "Before",
+			input:       "1\n2\n3\n4\n5",
+			args:        []string{"-B", "2", "3"},
+			expectedOut: "1\n2\n3",
+		},
+		{
+			name:        "Context",
+			input:       "1\n2\n3\n4\n5",
+			args:        []string{"-C", "2", "3"},
+			expectedOut: "1\n2\n3\n4\n5",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

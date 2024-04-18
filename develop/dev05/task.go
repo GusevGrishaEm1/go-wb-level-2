@@ -62,103 +62,72 @@ func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	lines := make([]string, 0)
-	ha
+	lineNumsToPrint := make(map[int]struct{}, 0)
+	count := 0
+	idx := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		if filter(line) {
-
+			if !config.Invert {
+				lineNumsToPrint[idx] = struct{}{}
+				if config.Count {
+					count++
+				}
+				if config.Context != 0 {
+					size := idx - config.Context
+					for i := idx; i >= size; i-- {
+						lineNumsToPrint[i] = struct{}{}
+					}
+					size = idx + config.Context
+					for i := idx; i <= size; i++ {
+						lineNumsToPrint[i] = struct{}{}
+					}
+				}
+				if config.After != 0 {
+					size := idx + config.After
+					for i := idx; i <= size; i++ {
+						lineNumsToPrint[i] = struct{}{}
+					}
+				}
+				if config.Before != 0 {
+					size := idx - config.Before
+					for i := idx; i >= size; i-- {
+						lineNumsToPrint[i] = struct{}{}
+					}
+				}
+			}
+		} else {
+			if config.Invert {
+				lineNumsToPrint[idx] = struct{}{}
+				if config.Count {
+					count++
+				}
+			}
 		}
 		lines = append(lines, line)
-	}
-
-	for i, line := range lines {
-		if filter(line) {
-			if config.Invert {
-				continue
-			}
-			if config.Count {
-				count++
-				continue
-			}
-			if config.LineNumber {
-				fmt.Print(i + 1, ":")
-			}
-			fmt.Println(line)
-		} else {
-			if config.Invert {
-				if config.Count {
-					count++
-					continue
-				}
-				if config.LineNumber {
-					fmt.Print(i + 1, ":")
-				}
-				fmt.Println(line)
-			}
-		}
-
-	}
-		line := scanner.Text()
-
-
-		if filter(line) {
-
-			if config.Invert {
-				continue
-			}
-
-			if config.Count {
-				count++
-				continue
-			}
-
-			if config.Context != 0 || config.After != 0 || config.Before != 0 {
-				if lastMatchLine == 0 {
-					lastMatchLine = count
-				}
-
-				if config.Before != 0 && count-lastMatchLine <= config.Before {
-					if config.LineNumber {
-						fmt.Print(count, ":")
-					}
-					fmt.Println(line)
-				} else if config.Context != 0 && count-lastMatchLine <= config.Context {
-					if config.LineNumber {
-						fmt.Print(count, ":")
-					}
-					fmt.Println(line)
-				} else if config.After != 0 && count-lastMatchLine > config.After {
-					if config.LineNumber {
-						fmt.Print(count, ":")
-					}
-					fmt.Println(line)
-				}
-			} else {
-				if config.LineNumber {
-					fmt.Print(count, ":")
-				}
-				fmt.Println(line)
-			}
-		} else {
-			if config.Invert {
-				if config.Count {
-					count++
-				}
-				if config.LineNumber {
-					fmt.Print(count, ":")
-				}
-				fmt.Println(line)
-			}
-		}
-	}
-
-	if config.Count {
-		fmt.Print(count)
+		idx++
 	}
 
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading input:", err)
 		os.Exit(1)
+	}
+
+	if config.Count {
+		fmt.Print(count)
+		return
+	}
+
+	for i, v := range lines {
+		if _, ok := lineNumsToPrint[i]; ok {
+			if config.LineNumber {
+				fmt.Printf("%d:", i+1)
+			}
+			fmt.Print(v)
+			if i != len(lines)-1 {
+				fmt.Print("\n")
+			}
+		}
 	}
 }
 
