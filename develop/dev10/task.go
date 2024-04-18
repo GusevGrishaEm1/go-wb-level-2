@@ -16,54 +16,47 @@ go-telnet --timeout=10s host port go-telnet mysite.ru 8080 go-telnet --timeout=3
 */
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os"
-	"strings"
 	"time"
 )
 
 func main() {
-	args := os.Args[1:]
-	if len(args) < 2 {
-		fmt.Println("Usage: go-telnet [--timeout=<timeout>] <host> <port>")
-		os.Exit(1)
+	timeout := flag.Duration("timeout", 30*time.Second, "timeout for connection")
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		fmt.Println("Please provide host:port to connect to")
+		return
 	}
 
-	var timeout time.Duration
-	if strings.Contains(args[0], "--timeout") {
-		timeout, _ = time.ParseDuration(strings.Split(args[0], "--timeout=")[1])
-	}
-
-	host := args[1]
-	port := args[2]
-
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+	address := flag.Arg(0)
+	conn, err := net.DialTimeout("tcp", address, *timeout)
 	if err != nil {
-		fmt.Println("Failed to connect:", err)
-		os.Exit(1)
+		fmt.Println("Error connecting to server:", err)
+		return
 	}
 	defer conn.Close()
-
-	fmt.Print("connected: ", conn.RemoteAddr().String())
-
-	go func() {
-		fmt.Fprint(os.Stdout, "sdf")
-		_, err := io.Copy(os.Stdout, conn)
-		if err != nil {
-			fmt.Println("Failed to copy from connection:", err)
-			os.Exit(1)
-		}
-	}()
 
 	go func() {
 		_, err := io.Copy(conn, os.Stdin)
 		if err != nil {
-			fmt.Println("Failed to copy to connection:", err)
-			os.Exit(1)
+			if err == io.EOF {
+				conn.Close()
+				return
+			}
+			fmt.Println("Error writing to server:", err)
 		}
 	}()
 
-	<-make(chan struct{})
+	_, err = io.Copy(os.Stdout, conn)
+	if err != nil {
+		if err == io.EOF {
+			return
+		}
+		fmt.Println("Error reading from server:", err)
+	}
 }

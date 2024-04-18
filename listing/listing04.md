@@ -19,6 +19,6 @@ func main() {
 
 Ответ:
 ```
-...
+deadlock
 
 ```

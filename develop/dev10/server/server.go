@@ -17,7 +17,7 @@ func handleConnection(conn net.Conn) {
 		fmt.Println("Received:", data)
 
 		// Echo back the received data to the client
-		_, err := conn.Write([]byte(data + "\n"))
+		_, err := conn.Write([]byte("Answer:" + data + "\n"))
 		if err != nil {
 			fmt.Println("Failed to write to connection:", err)
 			return
