@@ -161,33 +161,27 @@ func TestDeleteEventHandler(t *testing.T) {
 func TestEventsForDayHandler(t *testing.T) {
 	calendar := usecase.New()
 	createEvent(calendar, t)
-	// Create a controller with the mock calendar
 	c := controller{calendar}
 
-	// Create a request with the necessary query parameters
 	req, err := http.NewRequest("GET", "/events_for_day?day=2022-01-01&userID=1", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create a response recorder
 	res := httptest.NewRecorder()
 
-	// Call the handler function
 	c.eventsForDayHandler(res, req)
 
 	if res.Code != http.StatusOK {
 		t.Errorf("expected status %d; got %d", http.StatusOK, res.Code)
 	}
 
-	// Parse the response body into a ResultGet struct
 	var result models.ResultGet
 	err = json.Unmarshal(res.Body.Bytes(), &result)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Check the result
 	assert.Equal(t, []models.Event{
 		{ID: 1, UserID: 1, Title: "Test Event", Content: "This is a test event", Day: "2022-01-01", Week: "2022-W01", Month: "2022-01"},
 	}, result.Result)
@@ -196,33 +190,27 @@ func TestEventsForDayHandler(t *testing.T) {
 func TestEventsForWeekHandler(t *testing.T) {
 	calendar := usecase.New()
 	createEvent(calendar, t)
-	// Create a controller with the mock calendar
 	c := controller{calendar}
 
-	// Create a request with the necessary query parameters
 	req, err := http.NewRequest("GET", "/events_for_day?week=2022-W01&userID=1", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create a response recorder
 	res := httptest.NewRecorder()
 
-	// Call the handler function
 	c.eventsForWeekHandler(res, req)
 
 	if res.Code != http.StatusOK {
 		t.Errorf("expected status %d; got %d", http.StatusOK, res.Code)
 	}
 
-	// Parse the response body into a ResultGet struct
 	var result models.ResultGet
 	err = json.Unmarshal(res.Body.Bytes(), &result)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Check the result
 	assert.Equal(t, []models.Event{
 		{ID: 1, UserID: 1, Title: "Test Event", Content: "This is a test event", Day: "2022-01-01", Week: "2022-W01", Month: "2022-01"},
 	}, result.Result)
@@ -231,33 +219,27 @@ func TestEventsForWeekHandler(t *testing.T) {
 func TestEventsForMonthHandler(t *testing.T) {
 	calendar := usecase.New()
 	createEvent(calendar, t)
-	// Create a controller with the mock calendar
 	c := controller{calendar}
 
-	// Create a request with the necessary query parameters
 	req, err := http.NewRequest("GET", "/events_for_day?month=2022-01&userID=1", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create a response recorder
 	res := httptest.NewRecorder()
 
-	// Call the handler function
 	c.eventsForMonthHandler(res, req)
 
 	if res.Code != http.StatusOK {
 		t.Errorf("expected status %d; got %d", http.StatusOK, res.Code)
 	}
 
-	// Parse the response body into a ResultGet struct
 	var result models.ResultGet
 	err = json.Unmarshal(res.Body.Bytes(), &result)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Check the result
 	assert.Equal(t, []models.Event{
 		{ID: 1, UserID: 1, Title: "Test Event", Content: "This is a test event", Day: "2022-01-01", Week: "2022-W01", Month: "2022-01"},
 	}, result.Result)
