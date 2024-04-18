@@ -6,7 +6,7 @@ import (
 )
 
 func TestCut(t *testing.T) {
-	config := Config{
+	config := config{
 		Fields:    "2,3",
 		Delimiter: ",",
 		Separated: false,

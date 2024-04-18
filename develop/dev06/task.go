@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-type Config struct {
+type config struct {
 	Fields    string
 	Delimiter string
 	Separated bool
@@ -39,8 +39,8 @@ func main() {
 	fmt.Println(output)
 }
 
-func parseFlags() Config {
-	config := Config{}
+func parseFlags() config {
+	config := config{}
 
 	config.Fields = *flag.String("f", "", "Specify the columns to output")
 	config.Delimiter = *flag.String("d", "\t", "Specify the delimiter")
@@ -60,7 +60,7 @@ func scanInput() []string {
 	return lines
 }
 
-func cut(lines []string, config Config) (string, error) {
+func cut(lines []string, config config) (string, error) {
 	var output strings.Builder
 	fieldsMap := make(map[int]bool)
 	if config.Fields != "" {

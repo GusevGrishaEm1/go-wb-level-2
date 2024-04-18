@@ -49,9 +49,8 @@ func main() {
 
 		if config.Fixed {
 			return line == pattern
-		} else {
-			return strings.Contains(line, pattern)
 		}
+		return strings.Contains(line, pattern)
 	}
 
 	pattern := flag.Arg(0)
@@ -131,7 +130,7 @@ func main() {
 	}
 }
 
-type Config struct {
+type config struct {
 	After      int
 	Before     int
 	Context    int
@@ -143,8 +142,8 @@ type Config struct {
 	FilePath   string
 }
 
-func parseFlags() Config {
-	config := Config{}
+func parseFlags() config {
+	config := config{}
 
 	flag.IntVar(&config.After, "A", 0, "print +N lines after a match")
 	flag.IntVar(&config.Before, "B", 0, "print +N lines before a match")

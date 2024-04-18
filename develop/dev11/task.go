@@ -2,6 +2,7 @@ package main
 
 import (
 	"dev11/handlers"
+	"dev11/models"
 	"dev11/usecase"
 	"flag"
 )
@@ -34,10 +35,10 @@ func main() {
 	handlers.StartServer(calendar, config)
 }
 
-func parseFlags() handlers.ConfigServer {
+func parseFlags() models.ConfigServer {
 	var addr string
 	flag.StringVar(&addr, "addr", "", "Address of the config server")
 	flag.Parse()
 
-	return handlers.ConfigServer{Addr: addr}
+	return models.ConfigServer{Addr: addr}
 }

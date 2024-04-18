@@ -7,7 +7,7 @@ import (
 
 func TestSort(t *testing.T) {
 	input := []string{"d a", "c b", "b c", "a d"}
-	config := Config{
+	config := config{
 		Key:             "1",
 		SortByNumerical: false,
 		ReverseSort:     true,
@@ -15,7 +15,7 @@ func TestSort(t *testing.T) {
 	}
 
 	expected := []string{"d a", "c b", "b c", "a d"}
-	result, _ := Sort(input, config)
+	result, _ := sortByConfig(input, config)
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Sort function did not sort as expected. Expected: %v, Got: %v", expected, result)
@@ -23,14 +23,14 @@ func TestSort(t *testing.T) {
 }
 
 func TestGetCompareFunc(t *testing.T) {
-	config1 := Config{SortByNumerical: true, ReverseSort: true}
+	config1 := config{SortByNumerical: true, ReverseSort: true}
 	compareFunc1 := getCompareFunc(config1)
 
 	if !compareFunc1("10", "5") {
 		t.Errorf("Numerical reverse sort failed")
 	}
 
-	config2 := Config{SortByNumerical: false, ReverseSort: false}
+	config2 := config{SortByNumerical: false, ReverseSort: false}
 	compareFunc2 := getCompareFunc(config2)
 
 	if !compareFunc2("apple", "banana") {

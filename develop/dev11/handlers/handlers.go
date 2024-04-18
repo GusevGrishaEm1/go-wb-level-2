@@ -1,3 +1,4 @@
+// Package handlers содержит обработчики HTTP-запросов.
 package handlers
 
 import (
@@ -12,15 +13,27 @@ import (
 	"github.com/go-chi/chi"
 )
 
+// Calendar представляет интерфейс для работы с календарем.
 type Calendar interface {
+	// CreateEvent создает событие в календаре.
 	CreateEvent(e models.Event) (models.ResultPost, error)
+	// UpdateEvent обновляет событие в календаре.
 	UpdateEvent(e models.Event) (models.ResultPost, error)
+	// DeleteEvent удаляет событие из календаря.
 	DeleteEvent(e models.Event) (models.ResultPost, error)
+	// EventsForDay возвращает события для указанного дня и пользователя.
 	EventsForDay(day string, userID int) (models.ResultGet, error)
+	// EventsForWeek возвращает события для указанной недели и пользователя.
 	EventsForWeek(week string, userID int) (models.ResultGet, error)
+	// EventsForMonth возвращает события для указанного месяца и пользователя.
 	EventsForMonth(month string, userID int) (models.ResultGet, error)
 }
 
+// StartServer запускает HTTP-сервер.
+//
+// Параметры:
+//   - calendar: интерфейс для работы с календарем.
+//   - config: конфигурация сервера.
 func StartServer(calendar Calendar, config models.ConfigServer) {
 	controller := controller{calendar}
 

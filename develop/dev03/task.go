@@ -35,9 +35,9 @@ import (
 */
 
 func main() {
-	config := ParseFlags()
+	config := parseFlags()
 	input := []string{"d a", "c b", "b c", "a d"}
-	result, err := Sort(input, config)
+	result, err := sortByConfig(input, config)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		return
@@ -45,7 +45,7 @@ func main() {
 	fmt.Print(result)
 }
 
-type Config struct {
+type config struct {
 	Key              string
 	SortByNumerical  bool
 	ReverseSort      bool
@@ -56,8 +56,8 @@ type Config struct {
 	SortSuffixValues bool
 }
 
-func ParseFlags() Config {
-	config := Config{}
+func parseFlags() config {
+	config := config{}
 
 	flag.StringVar(&config.Key, "k", "", "Specify the column to sort by")
 	flag.BoolVar(&config.SortByNumerical, "n", false, "Sort by numerical value")
@@ -78,7 +78,7 @@ type element struct {
 	key string
 }
 
-func Sort(input []string, c Config) ([]string, error) {
+func sortByConfig(input []string, c config) ([]string, error) {
 	elementsToSort := make([]element, 0, len(input))
 
 	// Определяем элементы и их ключи для сортировки
@@ -126,7 +126,7 @@ func Sort(input []string, c Config) ([]string, error) {
 }
 
 // получаем функцию для сравнения элементов
-func getCompareFunc(config Config) func(v1 string, v2 string) bool {
+func getCompareFunc(config config) func(v1 string, v2 string) bool {
 	if config.SortByNumerical {
 		return func(v1 string, v2 string) bool {
 			num1, err1 := strconv.Atoi(v1)
@@ -136,9 +136,8 @@ func getCompareFunc(config Config) func(v1 string, v2 string) bool {
 					return num1 > num2
 				}
 				return num1 < num2
-			} else {
-				return false
 			}
+			return false
 		}
 	}
 	return func(v1 string, v2 string) bool {
