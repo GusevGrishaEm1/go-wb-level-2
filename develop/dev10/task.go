@@ -16,16 +16,19 @@ go-telnet --timeout=10s host port go-telnet mysite.ru 8080 go-telnet --timeout=3
 */
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 )
 
 func main() {
-	timeout := flag.Duration("timeout", 30*time.Second, "timeout for connection")
+	timeout := flag.Duration("timeout", 10*time.Second, "timeout for connection")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -37,26 +40,53 @@ func main() {
 	conn, err := net.DialTimeout("tcp", address, *timeout)
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
+		<-time.After(*timeout)
+		fmt.Println("Программа завершается по таймауту")
 		return
 	}
-	defer conn.Close()
 
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		_, err := io.Copy(conn, os.Stdin)
-		if err != nil {
-			if err == io.EOF {
-				conn.Close()
-				return
-			}
-			fmt.Println("Error writing to server:", err)
-		}
+		<-sigs
+		fmt.Println("Завершение по сигналу")
+		conn.Close()
+		os.Exit(1)
 	}()
 
-	_, err = io.Copy(os.Stdout, conn)
-	if err != nil {
-		if err == io.EOF {
-			return
-		}
-		fmt.Println("Error reading from server:", err)
+	if conn != nil {
+		defer conn.Close()
+
+		go func() {
+			defer wg.Done()
+			reader := bufio.NewReader(conn)
+			for {
+				data, err := reader.ReadBytes('\n')
+				if err != nil {
+					fmt.Println("Error reading from server:", err)
+					return
+				}
+				fmt.Print(string(data))
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				input := scanner.Text()
+				_, err := conn.Write([]byte(input + "\n"))
+				if err != nil {
+					fmt.Println("Error writing to server:", err)
+					break
+				}
+			}
+		}()
+
 	}
+
+	wg.Wait()
 }
