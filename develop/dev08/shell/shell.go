@@ -104,18 +104,14 @@ func executeCommand(command, output string) (string, error) {
 		}
 		output = string(outputBytes)
 	case "fork_exec":
-		cmd := exec.Command("ls", "-l")
+		cmd := exec.Command(args[1], args[2:]...)
 		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
+			Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
 		}
-		if err := cmd.Start(); err != nil {
-			fmt.Println("Error starting command:", err)
-			os.Exit(1)
-		}
-
-		if err := cmd.Wait(); err != nil {
-			fmt.Println("Error waiting for command:", err)
-			os.Exit(1)
+		outputByte, err := cmd.Output()
+		output = string(outputByte)
+		if err != nil {
+			return "", fmt.Errorf("Error: %s", err)
 		}
 	default:
 		return "", fmt.Errorf("Unknown command: %s", args[0])
