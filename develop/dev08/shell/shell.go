@@ -12,12 +12,6 @@ import (
 	"syscall"
 )
 
-type command struct {
-	command string
-	input   string
-	output  string
-}
-
 func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
