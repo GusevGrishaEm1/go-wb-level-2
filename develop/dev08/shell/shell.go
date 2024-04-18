@@ -93,15 +93,15 @@ func main() {
 				}
 				fmt.Println(string(output))
 			case "fork":
-				// id, _, errno := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
-				// if errno != 0 {
-				// 	fmt.Println("Fork call error:", err)
-				// }
-				// if id == 0 {
-				// 	fmt.Print("Child process: ", id)
-				// } else {
-				// 	fmt.Print("Parent process: ", id)
-				// }
+				id, _, errno := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
+				if errno != 0 {
+					fmt.Println("Fork call error:", err)
+				}
+				if id == 0 {
+					fmt.Print("Child process: ", id)
+				} else {
+					fmt.Print("Parent process: ", id)
+				}
 			}
 		}
 	}
