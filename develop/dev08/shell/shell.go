@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 func main() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
+	if len(os.Args) >= 2 {
+		executeCommand(strings.Join(os.Args[1:], " "))
+		return
+	}
 	for {
 		fmt.Print("$ ")
 		reader := bufio.NewReader(os.Stdin)
@@ -26,27 +25,20 @@ func main() {
 
 		input = strings.TrimSpace(input)
 
-		if input == "exit" {
-			break
-		}
-
-		commands := strings.Split(input, "|")
-
-		output := ""
-
-		for _, command := range commands {
-			output, err = executeCommand(command, output)
-			if err != nil {
-				fmt.Println(err)
-				return
+		if strings.Contains(input, "|") {
+			parts := strings.Split(input, "|")
+			var commands [][]string
+			for _, part := range parts {
+				commands = append(commands, strings.Fields(strings.TrimSpace("go run shell.go "+part)))
 			}
+			executePipeline(commands)
+		} else {
+			executeCommand(input)
 		}
-
-		fmt.Println(output)
 	}
 }
 
-func executeCommand(command, output string) (string, error) {
+func executeCommand(command string) {
 	args := strings.Fields(command)
 	var err error
 
@@ -54,62 +46,109 @@ func executeCommand(command, output string) (string, error) {
 	case "cd":
 		if len(args) > 1 {
 			if err = os.Chdir(args[1]); err != nil {
-				return "", fmt.Errorf("Error changing directory: %w", err)
+				fmt.Errorf("Error changing directory: %w", err)
 			}
 		} else {
-			return "", fmt.Errorf("Usage: cd <directory>")
+			fmt.Errorf("Usage: cd <path>")
 		}
 	case "pwd":
 		pwd, err := os.Getwd()
 		if err != nil {
-			return "", fmt.Errorf("Error getting current directory: %w", err)
+			fmt.Errorf("Error getting current directory: %w", err)
 		}
-		output = pwd
+		fmt.Println(pwd)
 	case "echo":
 		if len(args) > 1 {
-			output = strings.Join(args[1:], " ")
+			fmt.Println(strings.Join(args[1:], " "))
 		} else {
-			return "", fmt.Errorf("Usage: echo <text>")
+			fmt.Errorf("Usage: echo <text>")
 		}
 	case "kill":
 		if len(args) > 1 {
-			var pid int
-			pid, err = strconv.Atoi(args[1])
-			if err != nil {
-				return "", fmt.Errorf("Error converting PID: %w", err)
-			}
-			process, err := os.FindProcess(pid)
-			if err != nil {
-				return "", fmt.Errorf("Error finding process: %w", err)
-			}
-			err = process.Signal(syscall.SIGKILL)
-			if err != nil {
-				return "", fmt.Errorf("Error sending signal: %w", err)
-			}
-			output = fmt.Sprintf("Process with pid %d killed", pid)
+			kill(args[1])
 		} else {
-			return "", fmt.Errorf("Usage: kill <pid>")
+			fmt.Errorf("Usage: kill <pid>")
 		}
+	case "exit":
+		os.Exit(0)
 	case "ps":
-		cmd := exec.Command("ps", "aux")
-		outputBytes, err := cmd.Output()
+		cmd := exec.Command("ps")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
 		if err != nil {
-			return "", fmt.Errorf("error: %w", err)
+			fmt.Println("ps:", err)
 		}
-		output = string(outputBytes)
+		err = cmd.Wait()
+		if err != nil {
+			fmt.Println("ps:", err)
+		}
 	case "fork_exec":
-		cmd := exec.Command(args[1], args[2:]...)
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
-		}
-		outputByte, err := cmd.Output()
-		output = string(outputByte)
+		cmd := exec.Command("go", "run", "shell.go", strings.Join(args[1:], " "))
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
 		if err != nil {
-			return "", fmt.Errorf("Error: %s", err)
+			fmt.Println("Error:", err)
+			return
 		}
 	default:
-		return "", fmt.Errorf("Unknown command: %s", args[0])
+		fmt.Errorf("Unknown command: %s", args[0])
+	}
+}
+
+func executePipeline(commands [][]string) {
+	if len(commands) == 0 {
+		return
 	}
 
-	return output, nil
+	cmds := make([]*exec.Cmd, len(commands))
+	for i, cmdArgs := range commands {
+		cmds[i] = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	}
+
+	for i := 0; i < len(cmds)-1; i++ {
+		pipe, err := cmds[i].StdoutPipe()
+		if err != nil {
+			fmt.Println("Error creating pipe:", err)
+			return
+		}
+		cmds[i+1].Stdin = pipe
+	}
+
+	cmds[len(cmds)-1].Stdout = os.Stdout
+
+	for _, cmd := range cmds {
+		err := cmd.Start()
+		if err != nil {
+			fmt.Println("Error starting command:", err)
+			return
+		}
+	}
+
+	for _, cmd := range cmds {
+		err := cmd.Wait()
+		if err != nil {
+			fmt.Println("Error waiting for command:", err)
+		}
+	}
+}
+
+func kill(pid string) {
+	pidInt, err := strconv.Atoi(pid)
+	if err != nil {
+		fmt.Println("kill:", err)
+		return
+	}
+
+	process, err := os.FindProcess(pidInt)
+	if err != nil {
+		fmt.Println("kill:", err)
+		return
+	}
+
+	err = process.Kill()
+	if err != nil {
+		fmt.Println("kill:", err)
+	}
 }
